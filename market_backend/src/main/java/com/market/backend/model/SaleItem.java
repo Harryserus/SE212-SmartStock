@@ -2,6 +2,7 @@ package com.market.backend.model;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Table(name = "sale_item")
@@ -13,6 +14,7 @@ public class SaleItem {
 
     @ManyToOne
     @JoinColumn(name = "sale_id", nullable = false)
+    @JsonBackReference
     private Sale sale;
 
     @ManyToOne

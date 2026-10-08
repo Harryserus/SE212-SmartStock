@@ -7,9 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MarketBackendApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(
-                MarketBackendApplication.class,
-                args
-        );
+        SpringApplication.run(MarketBackendApplication.class, args);
     }
 }

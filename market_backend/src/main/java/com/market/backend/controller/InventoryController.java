@@ -1,83 +1,84 @@
 package com.market.backend.controller;
 
-import com.market.backend.dto.SaleRequest;
-import com.market.backend.model.Sale;
-import com.market.backend.service.SalesService;
+import com.market.backend.dto.InventoryResponse;
+import com.market.backend.service.InventoryService;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/sales")
+@RequestMapping("/api/inventory")
 @CrossOrigin(origins = "*")
-public class SalesController {
+public class InventoryController {
 
-    private final SalesService salesService;
+    private final InventoryService inventoryService;
 
-    public SalesController(SalesService salesService) {
-        this.salesService = salesService;
+    public InventoryController(
+            InventoryService inventoryService) {
+
+        this.inventoryService = inventoryService;
     }
 
-    // GET /api/sales
+    // GET /api/inventory
     @GetMapping
-    public ResponseEntity<List<Sale>> getAllSales() {
+    public ResponseEntity<List<InventoryResponse>>
+    getCurrentInventory() {
 
         return ResponseEntity.ok(
-                salesService.getAllSales()
+                inventoryService.getCurrentInventory()
         );
     }
 
-    // GET /api/sales/{id}
-    @GetMapping("/{id}")
-    public ResponseEntity<Sale> getSaleById(
-            @PathVariable int id) {
+    // GET /api/inventory/low-stock
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<InventoryResponse>>
+    getLowStockProducts() {
 
         return ResponseEntity.ok(
-                salesService.getSaleById(id)
+                inventoryService.getLowStockProducts()
         );
     }
 
-    // POST /api/sales
-    @PostMapping
-    public ResponseEntity<Sale> createSale(
-            @RequestBody SaleRequest request) {
-
-        Sale sale = salesService.createSale(request);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(sale);
-    }
-
-    // GET /api/sales/top
-    @GetMapping("/top")
-    public ResponseEntity<?> getTopSellingProducts(
-            @RequestParam(defaultValue = "10") int limit) {
+    // GET /api/inventory/{productId}
+    @GetMapping("/{productId}")
+    public ResponseEntity<InventoryResponse>
+    getProductInventory(
+            @PathVariable int productId) {
 
         return ResponseEntity.ok(
-                salesService.getTopSellingProducts(limit)
+                inventoryService.getProductInventory(productId)
         );
     }
 
-    // GET /api/sales/least
-    @GetMapping("/least")
-    public ResponseEntity<?> getLeastSellingProducts(
-            @RequestParam(defaultValue = "10") int limit) {
+    // POST /api/inventory/stock-in
+    @PostMapping("/stock-in")
+    public ResponseEntity<InventoryResponse>
+    addStock(
+            @RequestParam int productId,
+            @RequestParam int quantity) {
 
         return ResponseEntity.ok(
-                salesService.getLeastSellingProducts(limit)
+                inventoryService.addStock(
+                        productId,
+                        quantity
+                )
         );
     }
 
-    // GET /api/sales/summary
-    @GetMapping("/summary")
-    public ResponseEntity<?> getSalesSummary() {
+    // POST /api/inventory/adjust
+    @PostMapping("/adjust")
+    public ResponseEntity<InventoryResponse>
+    adjustStock(
+            @RequestParam int productId,
+            @RequestParam int quantity) {
 
         return ResponseEntity.ok(
-                salesService.getSalesSummary()
+                inventoryService.adjustStock(
+                        productId,
+                        quantity
+                )
         );
     }
 }
