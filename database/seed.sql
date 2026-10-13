@@ -52,12 +52,12 @@ INSERT INTO product (product_id, product_name, unit_price, barcode, category_id)
 -- ========== INVENTORY ==========
 INSERT INTO inventory (product_id, quantity_in_stock, reorder_level, last_updated) VALUES
 (101, 40,  20, '2026-09-28 09:00:00'),
-(102, 15,  10, '2026-09-28 09:00:00'),
+(102, 3,  10, '2026-09-28 09:00:00'),
 (103, 200, 50, '2026-09-28 09:00:00'),
 (104, 60,  30, '2026-09-30 07:30:00'),
 (105, 25,  15, '2026-09-30 07:30:00'),
 (106, 100, 40, '2026-09-29 18:00:00'),
-(107, 12,  10, '2026-09-29 18:00:00');
+(107, 8,  10, '2026-09-29 18:00:00');
 
 -- ========== PRODUCT_SUPPLIER ==========
 INSERT INTO product_supplier (product_id, supplier_id, supply_price, supplier_product_code, lead_time_days) VALUES
@@ -105,8 +105,6 @@ INSERT INTO sale_item
 (1001, 102, 1, 19.99, 0),
 (1002, 103, 5,  4.50, 0),
 (1003, 101, 2,  9.99, 0);
-
-
 
 
 
