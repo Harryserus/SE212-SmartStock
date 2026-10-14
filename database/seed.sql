@@ -136,11 +136,11 @@ INSERT INTO supplier_issue
 (issue_id, issue_type, description, status, issue_date, resolved_date,
  purchase_order_id, employee_id) VALUES
 (1, 'Late delivery', 'Order 9001 arrived after the expected date', 'resolved',
-    DATE_SUB(CURDATE(), INTERVAL 12 DAY), DATE_SUB(CURDATE(), INTERVAL 11 DAY), 9001, 3),
+    TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 12 DAY), '09:15:00'), DATE_SUB(CURDATE(), INTERVAL 11 DAY), 9001, 3),
 (2, 'Damaged goods', 'Some eggs were damaged in order 9002', 'open',
-    DATE_SUB(CURDATE(), INTERVAL 8 DAY), NULL, 9002, 4),
+    TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 8 DAY), '14:40:00'), NULL, 9002, 4),
 (3, 'Short delivery', 'Part of the order is still being checked', 'in_progress',
-    DATE_SUB(CURDATE(), INTERVAL 1 DAY), NULL, 9003, 4);
+    TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '11:25:00'), NULL, 9003, 4);
 
 -- ========== SALES ==========
 INSERT INTO sale (sale_id, sale_date_time, payment_method, employee_id) VALUES
