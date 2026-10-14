@@ -1,202 +1,57 @@
-
-const express = require("express");
-const pool = require("../db");
-
-const router = express.Router();
-
-// GET all sales
-router.get("/", async (req, res) => {
-  try {
-    const [rows] = await pool.query(`
-      SELECT
-        sale_id AS saleId,
-        total_amount AS totalAmount,
-        sale_date AS saleDate
-      FROM sale
-      ORDER BY sale_date DESC
-    `);
-
-    res.json(rows);
-  } catch (error) {
-    console.error("Get sales error:", error);
-    res.status(500).json({ error: "Failed to fetch sales" });
-  }
+const express=require("express");
+const pool=require("../db");
+const router=express.Router();
+const totalExpr="SUM(si.quantity * si.sale_unit_price - COALESCE(si.discount_amount,0))";
+router.get("/",async(req,res)=>{
+  try { const [rows]=await pool.query(`SELECT s.sale_id AS saleId,s.sale_date_time AS saleDateTime,s.payment_method AS paymentMethod,
+    s.employee_id AS employeeId,e.employee_name AS employeeName,COALESCE(${totalExpr},0) AS totalAmount
+    FROM sale s JOIN employee e ON e.employee_id=s.employee_id LEFT JOIN sale_item si ON si.sale_id=s.sale_id
+    GROUP BY s.sale_id ORDER BY s.sale_date_time DESC`); res.json(rows); }
+  catch(e){console.error(e);res.status(500).json({error:"Failed to fetch sales"});}
 });
-
-// GET one sale with its items
-router.get("/:id", async (req, res) => {
-  try {
-    const [sales] = await pool.execute(`
-      SELECT
-        sale_id AS saleId,
-        total_amount AS totalAmount,
-        sale_date AS saleDate
-      FROM sale
-      WHERE sale_id = ?
-    `, [req.params.id]);
-
-    if (sales.length === 0) {
-      return res.status(404).json({ error: "Sale not found" });
-    }
-
-    const [items] = await pool.execute(`
-      SELECT
-        si.product_id AS productId,
-        p.product_name AS productName,
-        si.quantity,
-        si.unit_price AS unitPrice,
-        si.subtotal
-      FROM sale_item si
-      JOIN product p ON p.product_id = si.product_id
-      WHERE si.sale_id = ?
-    `, [req.params.id]);
-
-    res.json({
-      ...sales[0],
-      items
-    });
-  } catch (error) {
-    console.error("Get sale error:", error);
-    res.status(500).json({ error: "Failed to fetch sale" });
-  }
+router.get("/:id",async(req,res)=>{
+  try { const [rows]=await pool.execute(`SELECT s.sale_id AS saleId,s.sale_date_time AS saleDateTime,s.payment_method AS paymentMethod,
+    s.employee_id AS employeeId,e.employee_name AS employeeName,COALESCE(${totalExpr},0) AS totalAmount
+    FROM sale s JOIN employee e ON e.employee_id=s.employee_id LEFT JOIN sale_item si ON si.sale_id=s.sale_id
+    WHERE s.sale_id=? GROUP BY s.sale_id`,[req.params.id]);
+    if(!rows.length)return res.status(404).json({error:"Sale not found"});
+    const [items]=await pool.execute(`SELECT si.product_id AS productId,p.product_name AS productName,si.quantity,
+    si.sale_unit_price AS saleUnitPrice,si.discount_amount AS discountAmount
+    FROM sale_item si JOIN product p ON p.product_id=si.product_id WHERE si.sale_id=?`,[req.params.id]);
+    res.json({...rows[0],items});
+  }catch(e){console.error(e);res.status(500).json({error:"Failed to fetch sale"});}
 });
-
-// CREATE a sale
-router.post("/", async (req, res) => {
-  const items = req.body?.items;
-
-  if (
-    !Array.isArray(items) ||
-    items.length === 0 ||
-    items.some(item =>
-      !Number.isInteger(Number(item?.productId)) ||
-      Number(item.productId) < 1 ||
-      !Number.isInteger(Number(item?.quantity)) ||
-      Number(item.quantity) < 1
-    )
-  ) {
-    return res.status(400).json({
-      error: "Provide items with a valid productId and positive integer quantity"
-    });
-  }
-
-  // Combine duplicate product IDs into one line
-  const quantities = new Map();
-
-  for (const item of items) {
-    const productId = Number(item.productId);
-    const quantity = Number(item.quantity);
-    quantities.set(
-      productId,
-      (quantities.get(productId) || 0) + quantity
-    );
-  }
-
-  let connection;
-
-  try {
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    let totalAmount = 0;
-    const saleItems = [];
-
-    // Lock inventory rows so concurrent sales cannot oversell stock
-    for (const [productId, quantity] of quantities) {
-      const [rows] = await connection.execute(`
-        SELECT
-          p.product_id AS productId,
-          p.product_name AS productName,
-          p.selling_price AS sellingPrice,
-          i.quantity AS currentStock
-        FROM product p
-        JOIN inventory i ON i.product_id = p.product_id
-        WHERE p.product_id = ?
-        FOR UPDATE
-      `, [productId]);
-
-      if (rows.length === 0) {
-        throw Object.assign(
-          new Error(`Product ${productId} not found`),
-          { statusCode: 400 }
-        );
-      }
-
-      const product = rows[0];
-
-      if (Number(product.currentStock) < quantity) {
-        throw Object.assign(
-          new Error(
-            `Insufficient stock for ${product.productName}. Available: ${product.currentStock}`
-          ),
-          { statusCode: 409 }
-        );
-      }
-
-      const unitPrice = Number(product.sellingPrice);
-      const subtotal = Number((unitPrice * quantity).toFixed(2));
-
-      totalAmount += subtotal;
-
-      saleItems.push({
-        productId,
-        productName: product.productName,
-        quantity,
-        unitPrice,
-        subtotal
-      });
-
-      await connection.execute(
-        "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?",
-        [quantity, productId]
-      );
+router.post("/",async(req,res)=>{
+  const {employeeId,paymentMethod,items}=req.body||{};
+  if(!Number.isInteger(Number(employeeId))||Number(employeeId)<1||typeof paymentMethod!=="string"||!paymentMethod.trim()||
+     !Array.isArray(items)||!items.length||items.some(i=>!Number.isInteger(Number(i.productId))||Number(i.productId)<1||!Number.isInteger(Number(i.quantity))||Number(i.quantity)<1))
+    return res.status(400).json({error:"Provide employeeId, paymentMethod, and sale items with positive productId and quantity"});
+  const byProduct=new Map();
+  for(const i of items){const id=Number(i.productId), prev=byProduct.get(id)||{productId:id,quantity:0,discountAmount:0};
+    prev.quantity+=Number(i.quantity);prev.discountAmount+=Number(i.discountAmount||0);byProduct.set(id,prev);}
+  const c=await pool.getConnection();
+  try{
+    await c.beginTransaction();
+    const [employee]=await c.execute("SELECT employee_id FROM employee WHERE employee_id=?",[Number(employeeId)]);
+    if(!employee.length){await c.rollback();return res.status(400).json({error:"Employee does not exist"});}
+    const saleItems=[];
+    for(const item of byProduct.values()){
+      const [rows]=await c.execute(`SELECT p.product_name,p.unit_price,i.quantity_in_stock FROM product p JOIN inventory i USING(product_id) WHERE p.product_id=? FOR UPDATE`,[item.productId]);
+      if(!rows.length)throw Object.assign(new Error("Product not found"),{status:400});
+      if(rows[0].quantity_in_stock<item.quantity)throw Object.assign(new Error("Insufficient stock for "+rows[0].product_name),{status:409});
+      const price=Number(rows[0].unit_price), discount=Number(item.discountAmount);
+      if(!Number.isFinite(discount)||discount<0||discount>price*item.quantity)throw Object.assign(new Error("Invalid discount amount"),{status:400});
+      saleItems.push({...item,saleUnitPrice:price,discountAmount:discount});
     }
-
-    totalAmount = Number(totalAmount.toFixed(2));
-
-    const [saleResult] = await connection.execute(
-      "INSERT INTO sale (total_amount, sale_date) VALUES (?,NOW())",
-      [totalAmount]
-    );
-
-    for (const item of saleItems) {
-      await connection.execute(`
-        INSERT INTO sale_item
-          (sale_id, product_id, quantity, unit_price, subtotal)
-        VALUES (?, ?, ?, ?, ?)
-      `, [
-        saleResult.insertId,
-        item.productId,
-        item.quantity,
-        item.unitPrice,
-        item.subtotal
-      ]);
+    const [s]=await c.execute("INSERT INTO sale(sale_date_time,payment_method,employee_id) VALUES(NOW(),?,?)",[paymentMethod.trim(),Number(employeeId)]);
+    for(const i of saleItems){
+      await c.execute("INSERT INTO sale_item(sale_id,product_id,quantity,sale_unit_price,discount_amount) VALUES(?,?,?,?,?)",[s.insertId,i.productId,i.quantity,i.saleUnitPrice,i.discountAmount]);
+      await c.execute("UPDATE inventory SET quantity_in_stock=quantity_in_stock-?,last_updated=NOW() WHERE product_id=?",[i.quantity,i.productId]);
     }
-
-    await connection.commit();
-
-    res.status(201).json({
-      message: "Sale recorded successfully",
-      saleId: saleResult.insertId,
-      totalAmount,
-      items: saleItems
-    });
-  } catch (error) {
-    if (connection) {
-      await connection.rollback();
-    }
-
-    console.error("Create sale error:", error);
-
-    res.status(error.statusCode || 500).json({
-      error: error.message || "Failed to record sale"
-    });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
-  }
+    await c.commit();
+    res.status(201).json({saleId:s.insertId,employeeId:Number(employeeId),paymentMethod:paymentMethod.trim(),saleDateTime:new Date().toISOString(),
+      totalAmount:Number(saleItems.reduce((n,i)=>n+i.quantity*i.saleUnitPrice-i.discountAmount,0).toFixed(2)),items:saleItems});
+  }catch(e){await c.rollback();console.error(e);res.status(e.status||500).json({error:e.status?e.message:"Failed to record sale"});}
+  finally{c.release();}
 });
-
-module.exports = router;
-
+module.exports=router;
