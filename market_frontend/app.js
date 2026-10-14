@@ -80,7 +80,7 @@ async function pageView(page, reportQuery = "") {
     const rows=await api("/inventory");
     return heading("Inventory","Review and adjust current stock.")+
       metrics([{label:"Products tracked",value:rows.length,icon:"▤",note:"Inventory records"},{label:"Low stock",value:rows.filter(x=>x.lowStock).length,icon:"⚑",note:"At or below reorder level",warn:rows.some(x=>x.lowStock)}])+
-      table(["PRODUCT","ON HAND","REORDER LEVEL","LAST UPDATED","STATUS",""],rows.map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel),dateText(p.lastUpdated),badge(p.lowStock?"Low stock":"In stock"),'<button class="row-actions" data-adjust data-product-id="'+esc(p.productId)+'" data-product-name="'+esc(p.productName)+'" data-quantity-in-stock="'+esc(p.quantityInStock)+'" data-reorder-level="'+esc(p.reorderLevel)+'">Adjust</button>']),"Current inventory","Adjustments update the inventory record");
+      table(["PRODUCT","ON HAND","REORDER LEVEL","LAST UPDATED","STATUS",""],rows.map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel),dateText(p.lastUpdated),badge(p.lowStock?"Low stock":"In stock"),'<button class="row-actions button-like" data-adjust data-product-id="'+esc(p.productId)+'" data-product-name="'+esc(p.productName)+'" data-quantity-in-stock="'+esc(p.quantityInStock)+'" data-reorder-level="'+esc(p.reorderLevel)+'">Adjust</button>']),"Current inventory","Adjustments update the inventory record");
   }
   if (page === "Sales") {
     const rows=await api("/sales");
