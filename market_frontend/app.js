@@ -6,7 +6,7 @@ const nav = document.getElementById("main-nav");
 const contentRoot = document.getElementById("page-content");
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const money = value => new Intl.NumberFormat(undefined,{style:"currency",currency:"USD"}).format(Number(value || 0));
+const money = value => new Intl.NumberFormat("th-TH",{style:"currency",currency:"THB"}).format(Number(value || 0));
 const dateText = value => value ? new Date(value).toLocaleString() : "—";
 
 async function api(path, options = {}) {
@@ -45,6 +45,7 @@ function selectOptions(rows, idKey, nameKey, placeholder) {
   return '<option value="">'+esc(placeholder)+'</option>'+rows.map(row=>'<option value="'+esc(row[idKey])+'">'+esc(row[nameKey])+'</option>').join("");
 }
 function productLabel(p) { return '<div class="table-product"><span class="tiny-product">▧</span><b>'+esc(p.productName)+'</b></div>'; }
+function productLink(p, page) { return '<a class="product-link" href="#" data-page="'+esc(page)+'">'+productLabel(p)+'</a>'; }
 
 async function render(page = activePage) {
   activePage = page;
@@ -62,11 +63,13 @@ async function render(page = activePage) {
 async function pageView(page, reportQuery = "") {
   if (page === "Dashboard") {
     const [summary, low, top] = await Promise.all([api("/management/overview"),api("/inventory/low-stock"),api("/management/top-products")]);
-    const rows=top.slice(0,5).map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]);
+    const rows=top.slice(0,5).map(p=>[productLink(p,"Products"),esc(p.quantitySold),money(p.salesRevenue)]);
     return heading("Dashboard","Store performance and activity at a glance.")+
       metrics([{label:"Today's revenue",value:money(summary.todayRevenue),icon:"↗",note:"Recorded sales today"},{label:"Transactions",value:summary.todayTransactions,icon:"▤",note:"Sales today"},{label:"Low-stock products",value:low.length,icon:"⚑",note:"At or below reorder level",warn:low.length>0}])+
+      '<div class="dashboard-tables">'+
       table(["BEST SELLING PRODUCT","UNITS SOLD","SALES REVENUE"],rows,"Best sellers","Last 30 days")+
-      table(["LOW-STOCK PRODUCT","ON HAND","REORDER LEVEL"],low.slice(0,6).map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel)]),"Needs attention","Products at or below reorder level");
+      table(["LOW-STOCK PRODUCT","ON HAND","REORDER LEVEL"],low.slice(0,6).map(p=>[productLink(p,"Inventory"),esc(p.quantityInStock),esc(p.reorderLevel)]),"Needs attention","Products at or below reorder level")+
+      '</div>';
   }
   if (page === "Products") {
     const products=await api("/products");
@@ -75,15 +78,15 @@ async function pageView(page, reportQuery = "") {
   }
   if (page === "Inventory") {
     const rows=await api("/inventory");
-    return heading("Inventory","Review and adjust current stock.","Adjust stock")+
+    return heading("Inventory","Review and adjust current stock.")+
       metrics([{label:"Products tracked",value:rows.length,icon:"▤",note:"Inventory records"},{label:"Low stock",value:rows.filter(x=>x.lowStock).length,icon:"⚑",note:"At or below reorder level",warn:rows.some(x=>x.lowStock)}])+
-      table(["PRODUCT","ON HAND","REORDER LEVEL","LAST UPDATED","STATUS",""],rows.map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel),dateText(p.lastUpdated),badge(p.lowStock?"Low stock":"In stock"),'<button class="row-actions" data-adjust="'+esc(p.productId)+'" data-name="'+esc(p.productName)+'" data-quantity="'+esc(p.quantityInStock)+'" data-reorder="'+esc(p.reorderLevel)+'">Adjust</button>']),"Current inventory","Adjustments update the inventory record");
+      table(["PRODUCT","ON HAND","REORDER LEVEL","LAST UPDATED","STATUS",""],rows.map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel),dateText(p.lastUpdated),badge(p.lowStock?"Low stock":"In stock"),'<button class="row-actions" data-adjust data-product-id="'+esc(p.productId)+'" data-product-name="'+esc(p.productName)+'" data-quantity-in-stock="'+esc(p.quantityInStock)+'" data-reorder-level="'+esc(p.reorderLevel)+'">Adjust</button>']),"Current inventory","Adjustments update the inventory record");
   }
   if (page === "Sales") {
     const rows=await api("/sales");
     return heading("Sales","Review recorded sales and create a transaction.","New sale")+
       metrics([{label:"Sales recorded",value:rows.length,icon:"↗",note:"All recorded transactions"},{label:"Total recorded revenue",value:money(rows.reduce((sum,s)=>sum+Number(s.totalAmount),0)),icon:"＄",note:"After item discounts"}])+
-      table(["SALE","DATE & TIME","EMPLOYEE","PAYMENT METHOD","TOTAL"],rows.map(s=>[esc("#"+s.saleId),dateText(s.saleDateTime),esc(s.employeeName),esc(s.paymentMethod),money(s.totalAmount)]),"Transactions","Values are loaded from the API");
+      table(["SALE","PRODUCTS","DATE & TIME","EMPLOYEE","PAYMENT METHOD","TOTAL"],rows.map(s=>[esc("#"+s.saleId),esc(s.productNames||"—"),dateText(s.saleDateTime),esc(s.employeeName),esc(s.paymentMethod),money(s.totalAmount)]),"Transactions","Values are loaded from the API");
   }
   if (page === "Purchase Orders") {
     const orders=await api("/purchase-orders");
@@ -106,8 +109,8 @@ async function pageView(page, reportQuery = "") {
   const reportPeriod=reportQuery ? "Selected date range" : "Last 30 days";
   return heading("Reports","Best-selling and slow-moving product reports.")+
     '<div class="filter-row"><label>From <input type="date" id="report-start"></label><label>To <input type="date" id="report-end"></label><button class="button" data-run-report>Apply dates</button></div>'+
-    table(["PRODUCT","UNITS SOLD","REVENUE"],top.map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]),"Best sellers",reportPeriod)+
-    table(["PRODUCT","UNITS SOLD"],slow.map(p=>[productLabel(p),esc(p.quantitySold)]),"Slow-moving products",reportPeriod);
+    table(["PRODUCT","UNITS SOLD","REVENUE"],top.map(p=>[productLink(p,"Products"),esc(p.quantitySold),money(p.salesRevenue)]),"Best sellers",reportPeriod)+
+    table(["PRODUCT","UNITS SOLD"],slow.map(p=>[productLink(p,"Products"),esc(p.quantitySold)]),"Slow-moving products",reportPeriod);
 }
 
 function bindTableSearch(){
@@ -211,15 +214,6 @@ document.addEventListener("submit",async e=>{
   e.preventDefault();
   const button=e.target.querySelector('[type="submit"]');button.disabled=true;button.textContent="Saving…";
   try{await submitModal(e.target);}catch(error){showToast(error.message);button.disabled=false;button.textContent="Save";}
-});
-document.addEventListener("input",e=>{
-  if(e.target.id==="global-search"){
-    const q=e.target.value.toLowerCase();
-    contentRoot.querySelectorAll("tbody tr").forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q));
-  }
-});
-document.addEventListener("keydown",e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.getElementById("global-search").focus();}
 });
 document.getElementById("today-date").textContent=new Intl.DateTimeFormat("en",{month:"short",day:"numeric",year:"numeric"}).format(new Date());
 render();
