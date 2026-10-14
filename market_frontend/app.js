@@ -65,7 +65,7 @@ async function pageView(page, reportQuery = "") {
     const rows=top.slice(0,5).map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]);
     return heading("Dashboard","Store performance and activity at a glance.")+
       metrics([{label:"Today's revenue",value:money(summary.todayRevenue),icon:"↗",note:"Recorded sales today"},{label:"Transactions",value:summary.todayTransactions,icon:"▤",note:"Sales today"},{label:"Low-stock products",value:low.length,icon:"⚑",note:"At or below reorder level",warn:low.length>0}])+
-      table(["BEST SELLING PRODUCT","UNITS SOLD","SALES REVENUE"],rows,"Best sellers",reportPeriod)+
+      table(["BEST SELLING PRODUCT","UNITS SOLD","SALES REVENUE"],rows,"Best sellers","Last 30 days")+
       table(["LOW-STOCK PRODUCT","ON HAND","REORDER LEVEL"],low.slice(0,6).map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel)]),"Needs attention","Products at or below reorder level");
   }
   if (page === "Products") {
