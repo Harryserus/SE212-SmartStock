@@ -93,7 +93,7 @@ CREATE TABLE supplier_issue (
     description          VARCHAR(255),
     status               VARCHAR(20) DEFAULT 'open'
                          CHECK (status IN ('open', 'in_progress', 'resolved')),
-    issue_date           DATE NOT NULL,
+    issue_date           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolved_date         DATE,
     purchase_order_id    INT,
     employee_id          INT,
