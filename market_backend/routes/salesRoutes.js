@@ -5,7 +5,7 @@ const totalExpr="SUM(si.quantity * si.sale_unit_price - COALESCE(si.discount_amo
 router.get("/",async(req,res)=>{
   try { const [rows]=await pool.query(`SELECT s.sale_id AS saleId,s.sale_date_time AS saleDateTime,s.payment_method AS paymentMethod,
     s.employee_id AS employeeId,e.employee_name AS employeeName,COALESCE(${totalExpr},0) AS totalAmount,
-    GROUP_CONCAT(DISTINCT p.product_name ORDER BY p.product_name SEPARATOR ', ') AS productNames
+    GROUP_CONCAT(DISTINCT p.product_name ORDER BY p.product_name SEPARATOR ' • ') AS productNames
     FROM sale s JOIN employee e ON e.employee_id=s.employee_id LEFT JOIN sale_item si ON si.sale_id=s.sale_id
     LEFT JOIN product p ON p.product_id=si.product_id
     GROUP BY s.sale_id ORDER BY s.sale_date_time DESC`); res.json(rows); }
