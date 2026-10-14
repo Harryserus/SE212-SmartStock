@@ -36,3 +36,5 @@
 .form-grid>label{font-size:11px;color:#435a46}
 .form-grid input,.form-grid select,.form-grid textarea{font-size:12px}
 .toast{font-size:12px}
+
+.form-grid .form-note{grid-column:1/-1;margin:0;color:#4f6252;font-size:12px;font-weight:500}
