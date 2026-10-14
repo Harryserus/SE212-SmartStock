@@ -1,0 +1,7 @@
+# Local environment settings and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Installed Node.js dependencies
+**/node_modules/
