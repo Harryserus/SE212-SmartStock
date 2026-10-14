@@ -1,40 +1,225 @@
-const navItems=[["Dashboard","◫"],["Sales","↗"],["Products","▧"],["Inventory","▤"],["Purchase Orders","⇄"],["Suppliers","♙"],["Supplier Issues","⚑"],["Reports","▥"]];
-const products=[
- {id:"PR-1048",name:"Organic Whole Milk",category:"Dairy",price:"$4.20",stock:18,reorder:12,status:"In stock",icon:"🥛"},
- {id:"PR-1032",name:"Sourdough Bread",category:"Bakery",price:"$5.80",stock:6,reorder:10,status:"Low stock",icon:"🍞"},
- {id:"PR-1021",name:"Avocado Hass",category:"Produce",price:"$1.50",stock:4,reorder:15,status:"Critical",icon:"🥑"},
- {id:"PR-1099",name:"Oat Milk Barista",category:"Dairy",price:"$4.75",stock:32,reorder:12,status:"In stock",icon:"🥤"},
- {id:"PR-1066",name:"Free Range Eggs",category:"Dairy",price:"$6.90",stock:9,reorder:14,status:"Low stock",icon:"🥚"},
- {id:"PR-1015",name:"Arabica Coffee Beans",category:"Pantry",price:"$12.50",stock:27,reorder:10,status:"In stock",icon:"☕"},
- {id:"PR-1074",name:"Strawberry Punnet",category:"Produce",price:"$5.25",stock:3,reorder:10,status:"Critical",icon:"🍓"}
-];
-const sales=[["SL-2584","Today, 10:42 AM","5 items","$34.80","Completed"],["SL-2583","Today, 10:18 AM","2 items","$12.40","Completed"],["SL-2582","Today, 9:56 AM","8 items","$67.25","Completed"],["SL-2581","Today, 9:31 AM","3 items","$18.90","Completed"],["SL-2580","Today, 9:12 AM","4 items","$29.60","Completed"]];
-const orders=[["PO-0087","Green Valley Produce","Oct 12, 2026","12 products","$1,284.50","Pending"],["PO-0086","Sunrise Dairy Co.","Oct 10, 2026","8 products","$764.20","Received"],["PO-0085","Daily Bread Bakery","Oct 09, 2026","6 products","$328.00","Processing"],["PO-0084","Green Valley Produce","Oct 07, 2026","9 products","$956.75","Received"]];
-const suppliers=[["Green Valley Produce","Fresh produce","Maya Chen","(555) 012-8841","Active"],["Sunrise Dairy Co.","Dairy & eggs","Jordan Lee","(555) 018-2370","Active"],["Daily Bread Bakery","Bakery","Sam Rivera","(555) 015-9902","Active"],["Harvest Pantry","Dry goods","Taylor Kim","(555) 011-7645","Active"]];
-let activePage="Overview",toastTimer;
-const nav=document.getElementById("main-nav"),content=document.getElementById("page-content");
-nav.innerHTML='<div class="nav-list">'+navItems.map((n,i)=>'<a href="#" class="nav-link '+(i===0?'active':'')+'" data-page="'+n[0]+'"><span class="nav-icon">'+n[1]+'</span><span class="nav-text">'+n[0]+'</span>'+(n[0]==="Supplier Issues"?'<span class="nav-count">3</span>':'')+'</a>').join("")+'</div>';
-function statusClass(s){return s==="Critical"?"critical":s==="Low stock"?"low":s==="Pending"?"pending":s==="Processing"?"processing":s==="Received"?"received":"status"}
-function badge(s){return '<span class="status '+statusClass(s)+'">'+s+'</span>'}
-function table(headers,rows,opts){return '<div class="panel table-panel"><div class="panel-header"><div><div class="panel-title">'+opts.title+'</div><div class="panel-subtitle">'+opts.subtitle+'</div></div><div class="table-tools">'+(opts.search?'<input class="table-search" placeholder="⌕  Search..." data-filter-table>':'')+(opts.action?'<button class="button" data-toast="'+opts.action+'">'+opts.actionLabel+'</button>':'')+'</div></div><div class="table-wrap"><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map((cell,i)=>'<td>'+cell+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></div>'}
-function productRows(list){return list.map(p=>['<div class="table-product"><span class="tiny-product">'+p.icon+'</span><b>'+p.name+'</b></div>','<span class="muted">'+p.id+'</span>',p.category,p.price,p.stock+' units',badge(p.status),'<button class="row-actions" data-toast="Product actions coming soon">•••</button>'])}
-function metrics(items){return '<div class="metrics">'+items.map((m,i)=>'<div class="metric-card '+(m.warn?'warning':'')+'"><div class="metric-top"><span>'+m.label+'</span><span class="metric-icon">'+m.icon+'</span></div><div class="metric-value">'+m.value+'</div><div class="metric-foot">'+(m.trend?'<span class="trend">'+m.trend+'</span> ':'')+m.note+'</div></div>').join("")+'</div>'}
-function heading(title,subtitle,action){return '<div class="page-heading"><div><div class="eyebrow">SMARTSTOCK WORKSPACE</div><h1>'+title+'</h1><p>'+subtitle+'</p></div><div class="heading-actions"><button class="button" data-toast="Export is not connected yet">⇩ <span>Export</span></button>'+(action?'<button class="button primary" data-modal="'+action+'"><span class="plus">＋</span><span>'+action+'</span></button>':'')+'</div></div>'}
-function chart(){return '<div class="panel"><div class="panel-header"><div><div class="panel-title">Sales overview</div><div class="panel-subtitle">Your store performance over time</div></div><select class="range-select" aria-label="Sales chart range"><option>Last 7 days</option><option>This month</option></select></div><div class="chart-legend"><span><i class="legend-dot"></i>Revenue</span><span><i class="legend-dot alt"></i>Orders</span></div><div class="chart-wrap"><svg viewBox="0 0 650 190" preserveAspectRatio="none" aria-label="Revenue chart"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8eae86" stop-opacity=".28"/><stop offset="1" stop-color="#8eae86" stop-opacity="0"/></linearGradient></defs><line class="chart-grid" x1="35" y1="25" x2="640" y2="25"/><line class="chart-grid" x1="35" y1="70" x2="640" y2="70"/><line class="chart-grid" x1="35" y1="115" x2="640" y2="115"/><line class="chart-grid" x1="35" y1="160" x2="640" y2="160"/><text class="chart-label" x="0" y="28">$2k</text><text class="chart-label" x="0" y="73">$1.5k</text><text class="chart-label" x="0" y="118">$1k</text><text class="chart-label" x="0" y="163">$0</text><path class="chart-area" d="M35 130 C70 120 75 90 115 102 S175 135 210 90 S270 60 300 82 S360 107 390 61 S455 50 485 70 S545 100 570 43 S615 51 640 25 L640 160 L35 160Z"/><path class="chart-line" d="M35 130 C70 120 75 90 115 102 S175 135 210 90 S270 60 300 82 S360 107 390 61 S455 50 485 70 S545 100 570 43 S615 51 640 25"/><circle class="chart-point" cx="210" cy="90" r="4"/><circle class="chart-point" cx="390" cy="61" r="4"/><circle class="chart-point" cx="570" cy="43" r="4"/><text class="chart-label" x="30" y="184">Oct 05</text><text class="chart-label" x="125" y="184">Oct 06</text><text class="chart-label" x="220" y="184">Oct 07</text><text class="chart-label" x="315" y="184">Oct 08</text><text class="chart-label" x="410" y="184">Oct 09</text><text class="chart-label" x="505" y="184">Oct 10</text><text class="chart-label" x="600" y="184">Oct 11</text></svg></div></div>'}
-function overview(){return heading("Dashboard","Your store performance and activity at a glance.", "New sale")+metrics([{label:"Today's revenue",value:"$2,840.50",icon:"↗",trend:"↑ 12.8%",note:"vs. yesterday"},{label:"Transactions",value:"128",icon:"▤",trend:"↑ 8.2%",note:"vs. yesterday"},{label:"Products in stock",value:"1,284",icon:"▧",trend:"↑ 24",note:"since last week"},{label:"Needs attention",value:"12 items",icon:"⚑",note:"Below reorder level",warn:true}])+'<div class="dashboard-grid">'+chart()+'<div class="panel"><div class="panel-header"><div><div class="panel-title">Best sellers</div><div class="panel-subtitle">Top products this week</div></div><button class="row-actions" data-page="Reports">•••</button></div><div class="top-products">'+[['🥑','Hass Avocado','Produce · 284 sold','$426.00','green'],['🥛','Organic Whole Milk','Dairy · 216 sold','$907.20',''],['🍞','Sourdough Bread','Bakery · 182 sold','$1,055.60','pink'],['☕','Arabica Coffee Beans','Pantry · 96 sold','$1,200.00','green']].map((p,i)=>'<div class="product-rank"><span class="rank-num">0'+(i+1)+'</span><span class="product-swatch '+p[4]+'">'+p[0]+'</span><span class="product-info"><b>'+p[1]+'</b><small>'+p[2]+'</small></span><span class="product-amount">'+p[3]+'<small>revenue</small></span></div>').join("")+'</div></div></div><div class="inventory-alert"><span class="alert-badge">!</span><span><b>12 products need restocking.</b> Review your low-stock inventory and create a purchase order.</span><button class="text-button" data-page="Inventory" style="margin-left:auto;color:#a57e34">View items →</button></div>'+table(["PRODUCT","SKU","CATEGORY","PRICE","ON HAND","STATUS",""],productRows(products.slice(0,4)),{title:"Recent product activity",subtitle:"A quick look at your product catalog",search:false,action:"Products",actionLabel:"View all →"})}
-function pageContent(page){if(page==="Dashboard")return overview();
-if(page==="Products")return heading("Products","Manage your catalog, pricing, and product details.","Add product")+metrics([{label:"Total products",value:"248",icon:"▧",trend:"↑ 6",note:"added this month"},{label:"Categories",value:"12",icon:"▦",note:"Across your catalog"},{label:"Average selling price",value:"$8.42",icon:"＄",note:"per product"},{label:"Low stock",value:"12",icon:"⚑",note:"Need a restock",warn:true}])+table(["PRODUCT","SKU","CATEGORY","SELL PRICE","ON HAND","STATUS",""],productRows(products),{title:"All products",subtitle:"Product catalog and current stock",search:true});
-if(page==="Inventory"){const low=products.filter(p=>p.stock<=p.reorder).length;return heading("Inventory","Track stock levels and stay ahead of restocking.","Adjust stock")+metrics([{label:"Total units on hand",value:"8,426",icon:"▤",trend:"↑ 3.4%",note:"vs. last month"},{label:"Healthy stock",value:(products.length-low)+" products",icon:"✓",note:"Within reorder range"},{label:"Low stock",value:low+" products",icon:"⚑",note:"At or below reorder level",warn:true},{label:"Stock value",value:"$42,680",icon:"＄",note:"At cost price"}])+'<div class="inventory-alert"><span class="alert-badge">!</span><span><b>'+low+' products are at or below reorder level.</b> Consider restocking soon.</span></div>'+table(["PRODUCT","SKU","CATEGORY","ON HAND","REORDER AT","STATUS",""],productRows(products).map((r,i)=>[r[0],r[1],r[2],products[i].stock+" units",products[i].reorder+" units",r[5],r[6]]),{title:"Stock overview",subtitle:"Updated just now",search:true})}
-if(page==="Sales")return heading("Sales","Review transactions and record customer purchases.","New sale")+metrics([{label:"Today's revenue",value:"$2,840.50",icon:"↗",trend:"↑ 12.8%",note:"vs. yesterday"},{label:"Transactions today",value:"128",icon:"▤",trend:"↑ 8.2%",note:"vs. yesterday"},{label:"Average sale",value:"$22.19",icon:"＄",note:"per transaction"},{label:"Items sold today",value:"416",icon:"▧",note:"Across all categories"}])+table(["SALE ID","DATE & TIME","ITEMS","TOTAL","STATUS",""],sales.map(s=>[s[0],'<span class="muted">'+s[1]+'</span>',s[2],'<b>'+s[3]+'</b>',badge(s[4]),'<button class="row-actions" data-toast="Sale details coming soon">•••</button>']),{title:"Recent transactions",subtitle:"Today's sales activity",search:true});
-if(page==="Purchase Orders")return heading("Purchase Orders","Create orders and track incoming stock from suppliers.","New purchase order")+metrics([{label:"Open orders",value:"6",icon:"⇄",note:"Awaiting delivery",warn:true},{label:"Received this month",value:"24",icon:"✓",trend:"↑ 4",note:"vs. last month"},{label:"Pending value",value:"$4,286",icon:"＄",note:"Across open orders"},{label:"Suppliers",value:"18",icon:"♙",note:"Active partners"}])+table(["ORDER ID","SUPPLIER","EXPECTED","ITEMS","TOTAL","STATUS",""],orders.map(o=>[o[0],'<b>'+o[1]+'</b>',o[2],o[3],o[4],badge(o[5]),'<button class="row-actions" data-toast="Order details coming soon">•••</button>']),{title:"Recent purchase orders",subtitle:"Order status and delivery schedule",search:true});
-if(page==="Suppliers")return heading("Suppliers","Keep supplier contacts and partnerships organized.","Add supplier")+metrics([{label:"Active suppliers",value:"18",icon:"♙",note:"Across 8 categories"},{label:"Orders this month",value:"24",icon:"⇄",trend:"↑ 4",note:"vs. last month"},{label:"Average lead time",value:"3.2 days",icon:"◷",note:"Across active suppliers"},{label:"Open issues",value:"3",icon:"⚑",note:"Need follow-up",warn:true}])+table(["SUPPLIER","CATEGORY","CONTACT","PHONE","STATUS",""],suppliers.map(s=>['<b>'+s[0]+'</b>',s[1],s[2],s[3],badge(s[4]),'<button class="row-actions" data-toast="Supplier details coming soon">•••</button>']),{title:"All suppliers",subtitle:"Your supplier directory",search:true});
-if(page==="Supplier Issues")return heading("Supplier Issues","Track delivery problems from report to resolution.","Report an issue")+metrics([{label:"Open issues",value:"3",icon:"⚑",note:"Need follow-up",warn:true},{label:"Resolved this month",value:"12",icon:"✓",trend:"↑ 3",note:"vs. last month"},{label:"Average resolution",value:"1.8 days",icon:"◷",note:"Across resolved issues"},{label:"Awaiting supplier",value:"2",icon:"↗",note:"Response pending"}])+'<div class="filter-row"><button class="filter-chip active">All issues <span class="muted">(15)</span></button><button class="filter-chip">Open <span class="muted">(3)</span></button><button class="filter-chip">Resolved <span class="muted">(12)</span></button></div>'+table(["ISSUE","PURCHASE ORDER","SUPPLIER","REPORTED","TYPE","STATUS",""],[["SI-0015","PO-0087","Green Valley Produce","Oct 11, 2026","Missing items",badge("Pending"),'<button class="row-actions">•••</button>'],["SI-0014","PO-0085","Daily Bread Bakery","Oct 10, 2026","Damaged goods",badge("Processing"),'<button class="row-actions">•••</button>'],["SI-0013","PO-0084","Green Valley Produce","Oct 08, 2026","Incorrect items",badge("Pending"),'<button class="row-actions">•••</button>'],["SI-0012","PO-0079","Sunrise Dairy Co.","Oct 03, 2026","Missing items",badge("Received"),'<button class="row-actions">•••</button>']],{title:"Issue log",subtitle:"Delivery issues reported by your team",search:true});
-return heading("Reports","Insights to help you make smarter store decisions.","Export report")+'<div class="report-cards">'+[{label:"Revenue this month",value:"$48,290",note:"↑ 9.6% vs. last month"},{label:"Units sold",value:"12,840",note:"Across 248 products"},{label:"Gross margin",value:"32.4%",note:"↑ 1.2% vs. last month"}].map((m,i)=>'<div class="panel report-card"><div class="metric-top"><span>'+m.label+'</span><span class="report-icon">'+["↗","▤","％"][i]+'</span></div><div class="metric-value">'+m.value+'</div><div class="metric-foot"><span class="trend">'+m.note+'</span></div><div class="progress"><span style="width:'+[68,54,75][i]+'%"></span></div></div>').join("")+'</div><div class="dashboard-grid">'+chart()+'<div class="panel"><div class="panel-header"><div><div class="panel-title">Top products</div><div class="panel-subtitle">By units sold · this month</div></div></div><div class="top-products">'+[['🥑','Hass Avocado','284 units'],['🥛','Organic Whole Milk','216 units'],['🍞','Sourdough Bread','182 units'],['☕','Arabica Coffee Beans','96 units']].map((p,i)=>'<div class="product-rank"><span class="rank-num">0'+(i+1)+'</span><span class="product-swatch green">'+p[0]+'</span><span class="product-info"><b>'+p[1]+'</b><small>'+p[2]+'</small></span></div>').join("")+'</div></div></div>'+table(["PRODUCT","CATEGORY","UNITS SOLD","REVENUE"],products.slice(0,5).map((p,i)=>['<div class="table-product"><span class="tiny-product">'+p.icon+'</span><b>'+p.name+'</b></div>',p.category,[284,216,182,96,81][i]+'',p.price]),{title:"Product performance",subtitle:"Sales performance for this month",search:false})}
-function render(page){activePage=page;document.title="SmartStock — "+page;document.getElementById("topbar-page").textContent=page;content.innerHTML=pageContent(page);document.querySelectorAll(".nav-link").forEach(a=>a.classList.toggle("active",a.dataset.page===page));bindPageEvents()}
-function bindPageEvents(){document.querySelectorAll("[data-page]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();render(el.dataset.page)}));document.querySelectorAll("[data-toast]").forEach(el=>el.addEventListener("click",()=>showToast(el.dataset.toast)));document.querySelectorAll("[data-modal]").forEach(el=>el.addEventListener("click",()=>openModal(el.dataset.modal)));document.querySelectorAll("[data-filter-table]").forEach(input=>input.addEventListener("input",()=>{const q=input.value.toLowerCase();input.closest(".table-panel").querySelectorAll("tbody tr").forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q))}));document.querySelectorAll(".filter-chip").forEach(el=>el.addEventListener("click",()=>{document.querySelectorAll(".filter-chip").forEach(c=>c.classList.remove("active"));el.classList.add("active")}))}
-function showToast(message){const toast=document.getElementById("toast");toast.textContent=message;toast.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("show"),2400)}
-function openModal(type){const isProduct=type==="Add product";const fields=isProduct?[["Product name","Product name","text"],["Category","Select category","select"],["Selling price","0.00","number"],["Cost price","0.00","number"],["Reorder level","10","number"]]:type==="New sale"?[["Product","Select product","select"],["Quantity","1","number"],["Payment method","Select payment method","select"],["Employee","Select employee","select"]]:[["Name",type.replace("Add ",""),"text"],["Notes","Add a short note","text"]];const backdrop=document.createElement("div");backdrop.className="modal-backdrop";backdrop.innerHTML='<form class="modal"><div class="eyebrow">SMARTSTOCK</div><h2>'+type+'</h2><p>Fill in the details below. This preview uses sample data only.</p><div class="form-grid">'+fields.map(f=>'<div class="field"><label>'+f[0]+'</label>'+(f[2]==="select"?'<select><option>'+f[1]+'</option>'+((f[0]==="Category"?["Dairy","Produce","Bakery","Pantry"]:f[0]==="Product"?products.map(p=>p.name):["Cash","Card","QR"]).map(x=>'<option>'+x+'</option>').join(""))+'</select>':'<input '+(f[2]==="number"?'type="number"':'type="text"')+' placeholder="'+f[1]+'">')+'</div>').join("")+'</div><div class="modal-actions"><button type="button" class="button" data-close>Cancel</button><button class="button primary">Save '+(isProduct?"product":"")+'</button></div></form>';document.body.appendChild(backdrop);backdrop.addEventListener("click",e=>{if(e.target===backdrop||e.target.closest("[data-close]"))backdrop.remove();if(e.target.closest("form")&&!e.target.closest("[data-close]")){e.preventDefault();backdrop.remove();showToast("Preview only — API connection will be added later")}})}
-document.getElementById("global-search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();document.querySelectorAll("#page-content tbody tr").forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q))});
-document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.getElementById("global-search").focus()}});
+const API_BASE = window.SMARTSTOCK_API_URL || "http://localhost:3000/api";
+const pages = ["Dashboard", "Sales", "Products", "Inventory", "Purchase Orders", "Suppliers", "Supplier Issues", "Reports"];
+let activePage = "Dashboard";
+let toastTimer;
+const nav = document.getElementById("main-nav");
+const contentRoot = document.getElementById("page-content");
+
+const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const money = value => new Intl.NumberFormat(undefined,{style:"currency",currency:"USD"}).format(Number(value || 0));
+const dateText = value => value ? new Date(value).toLocaleString() : "—";
+
+async function api(path, options = {}) {
+  const response = await fetch(API_BASE + path, {
+    ...options,
+    headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) }
+  });
+  const raw = await response.text();
+  let data = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+  if (!response.ok) throw new Error(data?.error || data?.message || `Request failed (${response.status})`);
+  return data;
+}
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+}
+function badge(value, kind = "") {
+  const safe = esc(value || "—");
+  const cls = kind || String(value || "").toLowerCase().replace(/[^a-z]+/g,"-");
+  return '<span class="status '+esc(cls)+'">'+safe+'</span>';
+}
+function metrics(items) {
+  return '<div class="metrics">'+items.map(m=>'<div class="metric-card '+(m.warn?'warning':'')+'"><div class="metric-top"><span>'+esc(m.label)+'</span><span class="metric-icon">'+esc(m.icon||"")+'</span></div><div class="metric-value">'+esc(m.value)+'</div><div class="metric-foot">'+esc(m.note||"")+'</div></div>').join("")+'</div>';
+}
+function heading(title, subtitle, action) {
+  return '<div class="page-heading"><div><div class="eyebrow">SMARTSTOCK WORKSPACE</div><h1>'+esc(title)+'</h1><p>'+esc(subtitle)+'</p></div><div class="heading-actions">'+(action?'<button class="button primary" data-modal="'+esc(action)+'"><span class="plus">＋</span><span>'+esc(action)+'</span></button>':'')+'</div></div>';
+}
+function table(headers, rows, title, subtitle, action) {
+  return '<div class="panel table-panel"><div class="panel-header"><div><div class="panel-title">'+esc(title)+'</div><div class="panel-subtitle">'+esc(subtitle)+'</div></div><div class="table-tools"><input class="table-search" placeholder="⌕ Search..." data-filter-table aria-label="Search table">'+(action?'<button class="button primary" data-modal="'+esc(action)+'">＋ '+esc(action)+'</button>':'')+'</div></div><div class="table-wrap"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join("")+'</tr>').join(""):'<tr><td colspan="'+headers.length+'" class="muted">No records found.</td></tr>')+'</tbody></table></div></div>';
+}
+function selectOptions(rows, idKey, nameKey, placeholder) {
+  return '<option value="">'+esc(placeholder)+'</option>'+rows.map(row=>'<option value="'+esc(row[idKey])+'">'+esc(row[nameKey])+'</option>').join("");
+}
+function productLabel(p) { return '<div class="table-product"><span class="tiny-product">▧</span><b>'+esc(p.productName)+'</b></div>'; }
+
+async function render(page = activePage) {
+  activePage = page;
+  document.title = "SmartStock — " + page;
+  document.getElementById("topbar-page").textContent = page;
+  nav.innerHTML = '<div class="nav-list">'+pages.map((p,i)=>'<a href="#" class="nav-link '+(p===page?'active':'')+'" data-page="'+esc(p)+'"><span class="nav-icon">'+["◫","↗","▧","▤","⇄","♙","⚑","▥"][i]+'</span><span class="nav-text">'+esc(p)+'</span></a>').join("")+'</div>';
+  contentRoot.innerHTML = '<div class="panel"><div class="panel-title">Loading '+esc(page)+'…</div></div>';
+  try {
+    contentRoot.innerHTML = await pageView(page);
+    bindTableSearch();
+  } catch (error) {
+    contentRoot.innerHTML = heading(page,"Could not load this page.")+'<div class="inventory-alert"><span class="alert-badge">!</span><span>'+esc(error.message)+'<br>Check that the backend and MySQL are running.</span><button class="button" data-retry>Try again</button></div>';
+  }
+}
+async function pageView(page, reportQuery = "") {
+  if (page === "Dashboard") {
+    const [summary, low, top] = await Promise.all([api("/management/overview"),api("/inventory/low-stock"),api("/management/top-products")]);
+    const rows=top.slice(0,5).map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]);
+    return heading("Dashboard","Store performance and activity at a glance.")+
+      metrics([{label:"Today's revenue",value:money(summary.todayRevenue),icon:"↗",note:"Recorded sales today"},{label:"Transactions",value:summary.todayTransactions,icon:"▤",note:"Sales today"},{label:"Low-stock products",value:low.length,icon:"⚑",note:"At or below reorder level",warn:low.length>0}])+
+      table(["BEST SELLING PRODUCT","UNITS SOLD","SALES REVENUE"],rows,"Best sellers",reportPeriod)+
+      table(["LOW-STOCK PRODUCT","ON HAND","REORDER LEVEL"],low.slice(0,6).map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel)]),"Needs attention","Products at or below reorder level");
+  }
+  if (page === "Products") {
+    const products=await api("/products");
+    return heading("Products","View and add products in the catalog.","Add product")+
+      table(["PRODUCT","BARCODE","CATEGORY","UNIT PRICE","ON HAND","REORDER LEVEL"],products.map(p=>[productLabel(p),esc(p.barcode||"—"),esc(p.categoryName||"—"),money(p.unitPrice),esc(p.quantityInStock),esc(p.reorderLevel)]),"Product catalog","Products stored in MySQL");
+  }
+  if (page === "Inventory") {
+    const rows=await api("/inventory");
+    return heading("Inventory","Review and adjust current stock.","Adjust stock")+
+      metrics([{label:"Products tracked",value:rows.length,icon:"▤",note:"Inventory records"},{label:"Low stock",value:rows.filter(x=>x.lowStock).length,icon:"⚑",note:"At or below reorder level",warn:rows.some(x=>x.lowStock)}])+
+      table(["PRODUCT","ON HAND","REORDER LEVEL","LAST UPDATED","STATUS",""],rows.map(p=>[productLabel(p),esc(p.quantityInStock),esc(p.reorderLevel),dateText(p.lastUpdated),badge(p.lowStock?"Low stock":"In stock"),'<button class="row-actions" data-adjust="'+esc(p.productId)+'" data-name="'+esc(p.productName)+'" data-quantity="'+esc(p.quantityInStock)+'" data-reorder="'+esc(p.reorderLevel)+'">Adjust</button>']),"Current inventory","Adjustments update the inventory record");
+  }
+  if (page === "Sales") {
+    const rows=await api("/sales");
+    return heading("Sales","Review recorded sales and create a transaction.","New sale")+
+      metrics([{label:"Sales recorded",value:rows.length,icon:"↗",note:"All recorded transactions"},{label:"Total recorded revenue",value:money(rows.reduce((sum,s)=>sum+Number(s.totalAmount),0)),icon:"＄",note:"After item discounts"}])+
+      table(["SALE","DATE & TIME","EMPLOYEE","PAYMENT METHOD","TOTAL"],rows.map(s=>[esc("#"+s.saleId),dateText(s.saleDateTime),esc(s.employeeName),esc(s.paymentMethod),money(s.totalAmount)]),"Transactions","Values are loaded from the API");
+  }
+  if (page === "Purchase Orders") {
+    const orders=await api("/purchase-orders");
+    const rows=await Promise.all(orders.map(async o=>{const detail=await api("/purchase-orders/"+o.purchaseOrderId);const count=detail.items.reduce((n,i)=>n+Number(i.quantityOrdered),0);return [esc("#"+o.purchaseOrderId),esc(o.supplierName),dateText(o.orderDate),esc(count),badge(o.status),o.status==="received"||o.status==="cancelled"?"—":'<button class="row-actions" data-receive="'+esc(o.purchaseOrderId)+'">Receive remaining</button>'];}));
+    return heading("Purchase Orders","Track orders and record received stock.","New purchase order")+
+      table(["ORDER","SUPPLIER","ORDER DATE","UNITS ORDERED","STATUS",""],rows,"Purchase orders","Receiving an order also adds received units to inventory");
+  }
+  if (page === "Suppliers") {
+    const rows=await api("/suppliers");
+    return heading("Suppliers","Manage supplier contact details.","Add supplier")+
+      table(["SUPPLIER","CONTACT","PHONE","EMAIL"],rows.map(s=>[esc(s.supplierName),esc(s.contactName||"—"),esc(s.phone||"—"),esc(s.email||"—")]),"Supplier directory","Suppliers stored in MySQL");
+  }
+  if (page === "Supplier Issues") {
+    const issues=await api("/management/supplier-issues");
+    return heading("Supplier Issues","Track delivery problems through resolution.","Report an issue")+
+      metrics([{label:"Issues recorded",value:issues.length,icon:"⚑",note:"All issue records"},{label:"Open issues",value:issues.filter(i=>i.status==="open"||i.status==="in_progress").length,icon:"!",note:"Need follow-up",warn:true}])+
+      table(["ISSUE","SUPPLIER","PURCHASE ORDER","DATE","TYPE","STATUS",""],issues.map(i=>[esc("#"+i.issueId),esc(i.supplierName),esc("#"+i.purchaseOrderId),dateText(i.issueDate),esc(i.issueType),badge(i.status),i.status==="resolved"||i.status==="closed"?"—":'<button class="row-actions" data-issue-status="'+esc(i.issueId)+'" data-status="resolved">Resolve</button>']),"Issue log","Supplier issues stored in MySQL");
+  }
+  const [top,slow]=await Promise.all([api("/management/top-products"+reportQuery),api("/management/slow-products"+reportQuery)]);
+  const reportPeriod=reportQuery ? "Selected date range" : "Last 30 days";
+  return heading("Reports","Best-selling and slow-moving product reports.")+
+    '<div class="filter-row"><label>From <input type="date" id="report-start"></label><label>To <input type="date" id="report-end"></label><button class="button" data-run-report>Apply dates</button></div>'+
+    table(["PRODUCT","UNITS SOLD","REVENUE"],top.map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]),"Best sellers",reportPeriod)+
+    table(["PRODUCT","UNITS SOLD"],slow.map(p=>[productLabel(p),esc(p.quantitySold)]),"Slow-moving products",reportPeriod);
+}
+
+function bindTableSearch(){
+  document.querySelectorAll("[data-filter-table]").forEach(input=>input.addEventListener("input",()=>{
+    const q=input.value.toLowerCase();
+    input.closest(".table-panel").querySelectorAll("tbody tr").forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q));
+  }));
+}
+async function showModal(type, data = {}) {
+  let form;
+  if(type==="Add product"){
+    const [categories]=await Promise.all([api("/categories")]);
+    form='<label>Product name<input name="productName" required maxlength="100"></label><label>Barcode<input name="barcode" maxlength="50"></label><label>Category<select name="categoryId" required>'+selectOptions(categories,"categoryId","categoryName","Select category")+'</select></label><label>Unit price<input name="unitPrice" type="number" min="0" step="0.01" required></label><label>Starting quantity<input name="quantityInStock" type="number" min="0" step="1" value="0" required></label><label>Reorder level<input name="reorderLevel" type="number" min="0" step="1" value="0" required></label>';
+  } else if(type==="Adjust stock"){
+    form='<input type="hidden" name="productId" value="'+esc(data.productId)+'"><p>Adjusting stock for <b>'+esc(data.productName)+'</b></p><label>Quantity in stock<input name="quantityInStock" type="number" min="0" step="1" value="'+esc(data.quantityInStock)+'" required></label><label>Reorder level<input name="reorderLevel" type="number" min="0" step="1" value="'+esc(data.reorderLevel)+'" required></label>';
+  } else if(type==="New sale"){
+    const [products,employees]=await Promise.all([api("/products"),api("/employees")]);
+    form='<label>Employee<select name="employeeId" required>'+selectOptions(employees,"employeeId","employeeName","Select employee")+'</select></label><label>Payment method<select name="paymentMethod" required><option value="">Select payment method</option><option value="cash">Cash</option><option value="card">Card</option><option value="qr_payment">QR payment</option></select></label><label>Product<select name="productId" required>'+selectOptions(products,"productId","productName","Select product")+'</select></label><label>Quantity<input name="quantity" type="number" min="1" step="1" value="1" required></label><label>Discount amount<input name="discountAmount" type="number" min="0" step="0.01" value="0" required></label>';
+  } else if(type==="Add supplier"){
+    form='<label>Supplier name<input name="supplierName" required maxlength="100"></label><label>Contact name<input name="contactName" maxlength="100"></label><label>Phone<input name="phone" maxlength="20"></label><label>Email<input name="email" type="email" maxlength="100"></label>';
+  } else if(type==="New purchase order"){
+    const [suppliers,employees,products]=await Promise.all([api("/suppliers"),api("/employees"),api("/products")]);
+    form='<label>Supplier<select name="supplierId" required>'+selectOptions(suppliers,"supplierId","supplierName","Select supplier")+'</select></label><label>Employee<select name="employeeId" required>'+selectOptions(employees,"employeeId","employeeName","Select employee")+'</select></label><label>Order date<input name="orderDate" type="date" required></label><label>Expected delivery<input name="expectedDeliveryDate" type="date"></label><label>Product<select name="productId" required>'+selectOptions(products,"productId","productName","Select product")+'</select></label><label>Quantity ordered<input name="quantityOrdered" type="number" min="1" step="1" value="1" required></label><label>Purchase unit price<input name="purchaseUnitPrice" type="number" min="0" step="0.01" required></label>';
+  } else if(type==="Report an issue"){
+    const [orders,employees]=await Promise.all([api("/purchase-orders"),api("/employees")]);
+    form='<label>Purchase order<select name="purchaseOrderId" required>'+selectOptions(orders,"purchaseOrderId","purchaseOrderId","Select order")+'</select></label><label>Employee<select name="employeeId" required>'+selectOptions(employees,"employeeId","employeeName","Select employee")+'</select></label><label>Issue type<select name="issueType" required><option value="">Select type</option><option>Damaged goods</option><option>Missing items</option><option>Incorrect items</option></select></label><label>Issue date<input name="issueDate" type="date" required value="'+new Date().toISOString().slice(0,10)+'"></label><label>Description<textarea name="description" maxlength="255"></textarea></label>';
+  } else return;
+  const backdrop=document.createElement("div");
+  backdrop.className="modal-backdrop";
+  backdrop.innerHTML='<form class="modal" data-modal-form="'+esc(type)+'"><div class="eyebrow">SMARTSTOCK</div><h2>'+esc(type)+'</h2><p>Save this information to the connected database.</p><div class="form-grid">'+form+'</div><div class="modal-actions"><button type="button" class="button" data-close>Cancel</button><button class="button primary" type="submit">Save</button></div></form>';
+  document.body.appendChild(backdrop);
+}
+async function submitModal(form){
+  const values=Object.fromEntries(new FormData(form).entries());
+  const n=(v)=>Number(v);
+  const type=form.dataset.modalForm;
+  if(type==="Add product"){
+    await api("/products",{method:"POST",body:JSON.stringify({...values,unitPrice:n(values.unitPrice),categoryId:n(values.categoryId),quantityInStock:n(values.quantityInStock),reorderLevel:n(values.reorderLevel),barcode:values.barcode||null})});
+  } else if(type==="Adjust stock"){
+    await api("/inventory/"+encodeURIComponent(values.productId),{method:"PUT",body:JSON.stringify({quantityInStock:n(values.quantityInStock),reorderLevel:n(values.reorderLevel)})});
+  } else if(type==="New sale"){
+    await api("/sales",{method:"POST",body:JSON.stringify({employeeId:n(values.employeeId),paymentMethod:values.paymentMethod,items:[{productId:n(values.productId),quantity:n(values.quantity),discountAmount:n(values.discountAmount)}]})});
+  } else if(type==="Add supplier"){
+    await api("/suppliers",{method:"POST",body:JSON.stringify({...values,contactName:values.contactName||null,phone:values.phone||null,email:values.email||null})});
+  } else if(type==="New purchase order"){
+    await api("/purchase-orders",{method:"POST",body:JSON.stringify({supplierId:n(values.supplierId),employeeId:n(values.employeeId),orderDate:values.orderDate,expectedDeliveryDate:values.expectedDeliveryDate||null,items:[{productId:n(values.productId),quantityOrdered:n(values.quantityOrdered),purchaseUnitPrice:n(values.purchaseUnitPrice)}]})});
+  } else if(type==="Report an issue"){
+    await api("/supplier-issues",{method:"POST",body:JSON.stringify({...values,purchaseOrderId:n(values.purchaseOrderId),employeeId:n(values.employeeId),description:values.description||null})});
+  }
+  document.querySelector(".modal-backdrop")?.remove();
+  showToast(type+" saved.");
+  await render(activePage);
+}
+async function receiveOrder(id){
+  if(!window.confirm("Receive all remaining units on this purchase order and add them to inventory?"))return;
+  const order=await api("/purchase-orders/"+id);
+  const items=order.items.filter(i=>Number(i.quantityOrdered)>Number(i.quantityReceived))
+    .map(i=>({productId:i.productId,quantityReceived:Number(i.quantityOrdered)-Number(i.quantityReceived)}));
+  if(!items.length)throw new Error("This order has no remaining units.");
+  await api("/purchase-orders/"+id+"/receive",{method:"POST",body:JSON.stringify({items})});
+  await api("/purchase-orders/"+id+"/status",{method:"PATCH",body:JSON.stringify({status:"received"})});
+  showToast("Received stock and updated inventory.");
+  await render(activePage);
+}
+async function updateIssue(id,status){
+  await api("/supplier-issues/"+id+"/status",{method:"PATCH",body:JSON.stringify({status})});
+  showToast("Supplier issue updated.");
+  await render(activePage);
+}
+
+document.addEventListener("click",async e=>{
+  const pageLink=e.target.closest("[data-page]");
+  const modalButton=e.target.closest("[data-modal]");
+  const close=e.target.closest("[data-close]");
+  const adjust=e.target.closest("[data-adjust]");
+  const receive=e.target.closest("[data-receive]");
+  const issue=e.target.closest("[data-issue-status]");
+  try{
+    if(pageLink){e.preventDefault();await render(pageLink.dataset.page);}
+    else if(modalButton){await showModal(modalButton.dataset.modal);}
+    else if(close||e.target.classList.contains("modal-backdrop"))document.querySelector(".modal-backdrop")?.remove();
+    else if(adjust)await showModal("Adjust stock",adjust.dataset);
+    else if(receive)await receiveOrder(receive.dataset.receive);
+    else if(issue)await updateIssue(issue.dataset.issueStatus,issue.dataset.status);
+    else if(e.target.closest("[data-retry]"))await render(activePage);
+    else if(e.target.closest("[data-run-report]")){
+      const params=new URLSearchParams();
+      const from=document.getElementById("report-start")?.value,to=document.getElementById("report-end")?.value;
+      if(from)params.set("startDate",from);if(to)params.set("endDate",to);
+      const qs=params.toString()?"?"+params.toString():"";
+      showToast("Report date filters applied.");
+      contentRoot.innerHTML=await pageView("Reports",qs);
+      bindTableSearch();
+      if(from)document.getElementById("report-start").value=from;
+      if(to)document.getElementById("report-end").value=to;
+    }
+  }catch(error){showToast(error.message);}
+});
+document.addEventListener("submit",async e=>{
+  if(!e.target.matches("[data-modal-form]"))return;
+  e.preventDefault();
+  const button=e.target.querySelector('[type="submit"]');button.disabled=true;button.textContent="Saving…";
+  try{await submitModal(e.target);}catch(error){showToast(error.message);button.disabled=false;button.textContent="Save";}
+});
+document.addEventListener("input",e=>{
+  if(e.target.id==="global-search"){
+    const q=e.target.value.toLowerCase();
+    contentRoot.querySelectorAll("tbody tr").forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q));
+  }
+});
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.getElementById("global-search").focus();}
+});
 document.getElementById("today-date").textContent=new Intl.DateTimeFormat("en",{month:"short",day:"numeric",year:"numeric"}).format(new Date());
-render("Dashboard");
+render();
