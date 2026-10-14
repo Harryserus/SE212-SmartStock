@@ -106,7 +106,7 @@ async function pageView(page, reportQuery = "") {
   const reportPeriod=reportQuery ? "Selected date range" : "Last 30 days";
   return heading("Reports","Best-selling and slow-moving product reports.")+
     '<div class="filter-row"><label>From <input type="date" id="report-start"></label><label>To <input type="date" id="report-end"></label><button class="button" data-run-report>Apply dates</button></div>'+
-    table(["PRODUCT","UNITS SOLD","REVENUE"],top.map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]),"Best sellers","Last 30 days")+
+    table(["PRODUCT","UNITS SOLD","REVENUE"],top.map(p=>[productLabel(p),esc(p.quantitySold),money(p.salesRevenue)]),"Best sellers",reportPeriod)+
     table(["PRODUCT","UNITS SOLD"],slow.map(p=>[productLabel(p),esc(p.quantitySold)]),"Slow-moving products",reportPeriod);
 }
 
