@@ -38,3 +38,18 @@
 .toast{font-size:12px}
 
 .form-grid .form-note{grid-column:1/-1;margin:0;color:#4f6252;font-size:12px;font-weight:500}
+
+
+/* Record management actions */
+.button-like{height:30px;padding:0 11px;border:1px solid #d7e2d4;border-radius:6px;background:#f7faf5;color:#31583c;font:600 11px "DM Sans",sans-serif;letter-spacing:0;}
+.button-like:hover{background:#eaf2e6;color:#1e6338;}
+.action-group{display:flex;align-items:center;gap:7px;}
+.small-action{height:30px;padding:0 10px;font-size:11px;white-space:nowrap;}
+.receive-action{background:#eaf5e9;border-color:#cde4ca;color:#28703b;}
+.receive-action:hover{background:#d9edd7;}
+.cancel-action{background:#fff0ef;border-color:#f2cfcb;color:#bd403a;}
+.cancel-action:hover{background:#ffe1df;}
+.status.cancelled{background:#fbe9e7;color:#c44840;}
+.settings-action{width:32px;height:30px;padding:0;border:1px solid #d7e2d4;border-radius:6px;background:#f7faf5;color:#31583c;font-size:16px;letter-spacing:0;}
+.settings-action:hover{background:#eaf2e6;color:#1e6338;}
+@media(max-width:760px){.action-group{gap:4px}.small-action{padding:0 7px;font-size:10px}}
