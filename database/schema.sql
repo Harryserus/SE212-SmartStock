@@ -66,7 +66,8 @@ CREATE TABLE purchase_order (
     purchase_order_id     INT PRIMARY KEY AUTO_INCREMENT,
     order_date            DATE NOT NULL,
     expected_delivery_date DATE,
-    status                VARCHAR(20) DEFAULT 'pending',
+    status                VARCHAR(20) DEFAULT 'pending'
+                          CHECK (status IN ('pending', 'received', 'cancelled')),
     supplier_id           INT NOT NULL,
     employee_id           INT NOT NULL,
     FOREIGN KEY (supplier_id) REFERENCES supplier(supplier_id),
@@ -90,7 +91,8 @@ CREATE TABLE supplier_issue (
     issue_id             INT PRIMARY KEY AUTO_INCREMENT,
     issue_type           VARCHAR(50),
     description          VARCHAR(255),
-    status               VARCHAR(20) DEFAULT 'open',
+    status               VARCHAR(20) DEFAULT 'open'
+                         CHECK (status IN ('open', 'in_progress', 'resolved')),
     issue_date           DATE NOT NULL,
     resolved_date         DATE,
     purchase_order_id    INT,
@@ -103,7 +105,8 @@ CREATE TABLE supplier_issue (
 CREATE TABLE sale (
     sale_id           INT PRIMARY KEY AUTO_INCREMENT,
     sale_date_time    DATETIME NOT NULL,
-    payment_method    VARCHAR(20),
+    payment_method    VARCHAR(20)
+                      CHECK (payment_method IN ('cash', 'card', 'transfer')),
     employee_id       INT NOT NULL,
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
