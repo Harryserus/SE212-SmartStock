@@ -73,8 +73,8 @@ async function pageView(page, reportQuery = "") {
   }
   if (page === "Products") {
     const products=await api("/products");
-    return heading("Products","View and add products in the catalog.","Add product")+
-      table(["PRODUCT","BARCODE","CATEGORY","UNIT PRICE","ON HAND","REORDER LEVEL"],products.map(p=>[productLabel(p),esc(p.barcode||"—"),esc(p.categoryName||"—"),money(p.unitPrice),esc(p.quantityInStock),esc(p.reorderLevel)]),"Product catalog","Products stored in MySQL");
+    return heading("Products","View and edit products in the catalog.","Add product")+
+      table(["PRODUCT","BARCODE","CATEGORY","UNIT PRICE","ON HAND","REORDER LEVEL",""],products.map(p=>[productLabel(p),esc(p.barcode||"—"),esc(p.categoryName||"—"),money(p.unitPrice),esc(p.quantityInStock),esc(p.reorderLevel),'<button class="row-actions button-like" data-edit-product data-product-id="'+esc(p.productId)+'" data-product-name="'+esc(p.productName)+'" data-barcode="'+esc(p.barcode||"")+'" data-category-id="'+esc(p.categoryId)+'" data-reorder-level="'+esc(p.reorderLevel)+'" data-unit-price="'+esc(p.unitPrice)+'">Edit</button>']),"Product catalog","Products stored in MySQL");
   }
   if (page === "Inventory") {
     const rows=await api("/inventory");
@@ -90,20 +90,20 @@ async function pageView(page, reportQuery = "") {
   }
   if (page === "Purchase Orders") {
     const orders=await api("/purchase-orders");
-    const rows=await Promise.all(orders.map(async o=>{const detail=await api("/purchase-orders/"+o.purchaseOrderId);const count=detail.items.reduce((n,i)=>n+Number(i.quantityOrdered),0);return [esc("#"+o.purchaseOrderId),esc(o.supplierName),dateText(o.orderDate),esc(count),badge(o.status),o.status==="received"||o.status==="cancelled"?"—":'<button class="row-actions" data-receive="'+esc(o.purchaseOrderId)+'">Receive remaining</button>'];}));
+    const rows=await Promise.all(orders.map(async o=>{const detail=await api("/purchase-orders/"+o.purchaseOrderId);const count=detail.items.reduce((n,i)=>n+Number(i.quantityOrdered),0);const actions=o.status==="pending"?'<div class="action-group"><button class="button small-action receive-action" data-receive="'+esc(o.purchaseOrderId)+'">Receive remaining</button><button class="button small-action cancel-action" data-cancel-order="'+esc(o.purchaseOrderId)+'">Cancel</button></div>':o.status==="partial"?'<div class="action-group"><button class="button small-action receive-action" data-receive="'+esc(o.purchaseOrderId)+'">Receive remaining</button></div>':"—";return [esc("#"+o.purchaseOrderId),esc(o.supplierName),dateText(o.orderDate),esc(count),badge(o.status,o.status==="cancelled"?"cancelled":""),actions];}));
     return heading("Purchase Orders","Track orders and record received stock.","New purchase order")+
       table(["ORDER","SUPPLIER","ORDER DATE","UNITS ORDERED","STATUS",""],rows,"Purchase orders","Receiving an order also adds received units to inventory");
   }
   if (page === "Suppliers") {
     const rows=await api("/suppliers");
     return heading("Suppliers","Manage supplier contact details.","Add supplier")+
-      table(["SUPPLIER","CONTACT","PHONE","EMAIL"],rows.map(s=>[esc(s.supplierName),esc(s.contactName||"—"),esc(s.phone||"—"),esc(s.email||"—")]),"Supplier directory","Suppliers stored in MySQL");
+      table(["SUPPLIER","CONTACT","PHONE","EMAIL",""],rows.map(s=>[esc(s.supplierName),esc(s.contactName||"—"),esc(s.phone||"—"),esc(s.email||"—"),'<button class="row-actions button-like" data-edit-supplier data-supplier-id="'+esc(s.supplierId)+'" data-supplier-name="'+esc(s.supplierName)+'" data-contact-name="'+esc(s.contactName||"")+'" data-phone="'+esc(s.phone||"")+'" data-email="'+esc(s.email||"")+'">Edit</button>']),"Supplier directory","Suppliers stored in MySQL");
   }
   if (page === "Supplier Issues") {
     const issues=await api("/management/supplier-issues");
     return heading("Supplier Issues","Track delivery problems through resolution.","Report an issue")+
       metrics([{label:"Issues recorded",value:issues.length,icon:"⚑",note:"All issue records"},{label:"Open issues",value:issues.filter(i=>i.status==="open"||i.status==="in_progress").length,icon:"!",note:"Need follow-up",warn:true}])+
-      table(["ISSUE","SUPPLIER","PURCHASE ORDER","CREATED AT","TYPE","STATUS",""],issues.map(i=>[esc("#"+i.issueId),esc(i.supplierName),esc("#"+i.purchaseOrderId),dateText(i.issueDate),esc(i.issueType),badge(i.status),i.status==="resolved"||i.status==="closed"?"—":'<button class="row-actions" data-issue-status="'+esc(i.issueId)+'" data-status="resolved">Resolve</button>']),"Issue log","Supplier issues stored in MySQL");
+      table(["ISSUE","SUPPLIER","PURCHASE ORDER","CREATED AT","TYPE","STATUS",""],issues.map(i=>[esc("#"+i.issueId),esc(i.supplierName),esc("#"+i.purchaseOrderId),dateText(i.issueDate),esc(i.issueType),badge(i.status),'<button class="row-actions settings-action" aria-label="Change issue status" title="Change issue status" data-issue-settings data-issue-id="'+esc(i.issueId)+'" data-status="'+esc(i.status)+'">⚙</button>']),"Issue log","Supplier issues stored in MySQL");
   }
   const [top,slow]=await Promise.all([api("/management/top-products"+reportQuery),api("/management/slow-products"+reportQuery)]);
   const reportPeriod=reportQuery ? "Selected date range" : "Last 30 days";
@@ -124,13 +124,19 @@ async function showModal(type, data = {}) {
   if(type==="Add product"){
     const [categories]=await Promise.all([api("/categories")]);
     form='<label>Product name<input name="productName" required maxlength="100"></label><label>Barcode<input name="barcode" maxlength="50"></label><label>Category<select name="categoryId" required>'+selectOptions(categories,"categoryId","categoryName","Select category")+'</select></label><label>Unit price<input name="unitPrice" type="number" min="0" step="0.01" required></label><label>Starting quantity<input name="quantityInStock" type="number" min="0" step="1" value="0" required></label><label>Reorder level<input name="reorderLevel" type="number" min="0" step="1" value="0" required></label>';
+  } else if(type==="Edit product"){
+    form='<input type="hidden" name="productId" value="'+esc(data.productId)+'"><input type="hidden" name="productName" value="'+esc(data.productName)+'"><input type="hidden" name="barcode" value="'+esc(data.barcode||"")+'"><input type="hidden" name="categoryId" value="'+esc(data.categoryId)+'"><input type="hidden" name="reorderLevel" value="'+esc(data.reorderLevel)+'"><label>Product<input value="'+esc(data.productName)+'" disabled></label><label>Selling price (unit price)<input name="unitPrice" type="number" min="0" step="0.01" value="'+esc(data.unitPrice)+'" required></label>';
   } else if(type==="Adjust stock"){
     form='<input type="hidden" name="productId" value="'+esc(data.productId)+'"><p>Adjusting stock for <b>'+esc(data.productName)+'</b></p><label>Quantity in stock<input name="quantityInStock" type="number" min="0" step="1" value="'+esc(data.quantityInStock)+'" required></label><label>Reorder level<input name="reorderLevel" type="number" min="0" step="1" value="'+esc(data.reorderLevel)+'" required></label>';
   } else if(type==="New sale"){
     const [products,employees]=await Promise.all([api("/products"),api("/employees")]);
     form='<label>Employee<select name="employeeId" required>'+selectOptions(employees,"employeeId","employeeName","Select employee")+'</select></label><label>Payment method<select name="paymentMethod" required><option value="">Select payment method</option><option value="cash">Cash</option><option value="card">Card</option><option value="qr_payment">QR payment</option></select></label><label>Product<select name="productId" required>'+selectOptions(products,"productId","productName","Select product")+'</select></label><label>Quantity<input name="quantity" type="number" min="1" step="1" value="1" required></label><label>Discount amount<input name="discountAmount" type="number" min="0" step="0.01" value="0" required></label>';
+  } else if(type==="Edit supplier"){
+    form='<input type="hidden" name="supplierId" value="'+esc(data.supplierId)+'"><label>Supplier name<input name="supplierName" required maxlength="100" value="'+esc(data.supplierName)+'"></label><label>Contact name<input name="contactName" maxlength="100" value="'+esc(data.contactName||"")+'"></label><label>Phone<input name="phone" maxlength="20" value="'+esc(data.phone||"")+'"></label><label>Email<input name="email" type="email" maxlength="100" value="'+esc(data.email||"")+'"></label>';
   } else if(type==="Add supplier"){
     form='<label>Supplier name<input name="supplierName" required maxlength="100"></label><label>Contact name<input name="contactName" maxlength="100"></label><label>Phone<input name="phone" maxlength="20"></label><label>Email<input name="email" type="email" maxlength="100"></label>';
+  } else if(type==="Update issue status"){
+    form='<input type="hidden" name="issueId" value="'+esc(data.issueId)+'"><label>Status<select name="status" required><option value="open" '+(data.status==="open"?"selected":"")+'>Open</option><option value="in_progress" '+(data.status==="in_progress"?"selected":"")+'>In progress</option><option value="resolved" '+(data.status==="resolved"?"selected":"")+'>Resolved</option><option value="closed" '+(data.status==="closed"?"selected":"")+'>Closed</option></select></label>';
   } else if(type==="New purchase order"){
     const [suppliers,employees,products]=await Promise.all([api("/suppliers"),api("/employees"),api("/products")]);
     form='<label>Supplier<select name="supplierId" required>'+selectOptions(suppliers,"supplierId","supplierName","Select supplier")+'</select></label><label>Employee<select name="employeeId" required>'+selectOptions(employees,"employeeId","employeeName","Select employee")+'</select></label><label>Order date<input name="orderDate" type="date" required></label><label>Expected delivery<input name="expectedDeliveryDate" type="date"></label><label>Product<select name="productId" required>'+selectOptions(products,"productId","productName","Select product")+'</select></label><label>Quantity ordered<input name="quantityOrdered" type="number" min="1" step="1" value="1" required></label><label>Purchase unit price<input name="purchaseUnitPrice" type="number" min="0" step="0.01" required></label>';
@@ -149,12 +155,18 @@ async function submitModal(form){
   const type=form.dataset.modalForm;
   if(type==="Add product"){
     await api("/products",{method:"POST",body:JSON.stringify({...values,unitPrice:n(values.unitPrice),categoryId:n(values.categoryId),quantityInStock:n(values.quantityInStock),reorderLevel:n(values.reorderLevel),barcode:values.barcode||null})});
+  } else if(type==="Edit product"){
+    await api("/products/"+encodeURIComponent(values.productId),{method:"PUT",body:JSON.stringify({productName:values.productName,barcode:values.barcode||null,unitPrice:n(values.unitPrice),categoryId:n(values.categoryId),reorderLevel:n(values.reorderLevel)})});
   } else if(type==="Adjust stock"){
     await api("/inventory/"+encodeURIComponent(values.productId),{method:"PUT",body:JSON.stringify({quantityInStock:n(values.quantityInStock),reorderLevel:n(values.reorderLevel)})});
   } else if(type==="New sale"){
     await api("/sales",{method:"POST",body:JSON.stringify({employeeId:n(values.employeeId),paymentMethod:values.paymentMethod,items:[{productId:n(values.productId),quantity:n(values.quantity),discountAmount:n(values.discountAmount)}]})});
   } else if(type==="Add supplier"){
     await api("/suppliers",{method:"POST",body:JSON.stringify({...values,contactName:values.contactName||null,phone:values.phone||null,email:values.email||null})});
+  } else if(type==="Edit supplier"){
+    await api("/suppliers/"+encodeURIComponent(values.supplierId),{method:"PUT",body:JSON.stringify({...values,contactName:values.contactName||null,phone:values.phone||null,email:values.email||null})});
+  } else if(type==="Update issue status"){
+    await api("/supplier-issues/"+encodeURIComponent(values.issueId)+"/status",{method:"PATCH",body:JSON.stringify({status:values.status})});
   } else if(type==="New purchase order"){
     await api("/purchase-orders",{method:"POST",body:JSON.stringify({supplierId:n(values.supplierId),employeeId:n(values.employeeId),orderDate:values.orderDate,expectedDeliveryDate:values.expectedDeliveryDate||null,items:[{productId:n(values.productId),quantityOrdered:n(values.quantityOrdered),purchaseUnitPrice:n(values.purchaseUnitPrice)}]})});
   } else if(type==="Report an issue"){
@@ -175,6 +187,12 @@ async function receiveOrder(id){
   showToast("Received stock and updated inventory.");
   await render(activePage);
 }
+async function cancelOrder(id){
+  if(!window.confirm("Cancel this pending purchase order?"))return;
+  await api("/purchase-orders/"+id+"/status",{method:"PATCH",body:JSON.stringify({status:"cancelled"})});
+  showToast("Purchase order cancelled.");
+  await render(activePage);
+}
 async function updateIssue(id,status){
   await api("/supplier-issues/"+id+"/status",{method:"PATCH",body:JSON.stringify({status})});
   showToast("Supplier issue updated.");
@@ -187,14 +205,20 @@ document.addEventListener("click",async e=>{
   const close=e.target.closest("[data-close]");
   const adjust=e.target.closest("[data-adjust]");
   const receive=e.target.closest("[data-receive]");
-  const issue=e.target.closest("[data-issue-status]");
+  const issue=e.target.closest("[data-issue-settings]");
+  const editProduct=e.target.closest("[data-edit-product]");
+  const editSupplier=e.target.closest("[data-edit-supplier]");
+  const cancel=e.target.closest("[data-cancel-order]");
   try{
     if(pageLink){e.preventDefault();await render(pageLink.dataset.page);}
     else if(modalButton){await showModal(modalButton.dataset.modal);}
+    else if(editProduct){await showModal("Edit product",editProduct.dataset);}
+    else if(editSupplier){await showModal("Edit supplier",editSupplier.dataset);}
+    else if(issue){await showModal("Update issue status",issue.dataset);}
     else if(close||e.target.classList.contains("modal-backdrop"))document.querySelector(".modal-backdrop")?.remove();
     else if(adjust)await showModal("Adjust stock",adjust.dataset);
     else if(receive)await receiveOrder(receive.dataset.receive);
-    else if(issue)await updateIssue(issue.dataset.issueStatus,issue.dataset.status);
+    else if(cancel)await cancelOrder(cancel.dataset.cancelOrder);
     else if(e.target.closest("[data-retry]"))await render(activePage);
     else if(e.target.closest("[data-run-report]")){
       const params=new URLSearchParams();
