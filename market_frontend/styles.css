@@ -5,3 +5,34 @@
 .brand{justify-content:center;padding:0 8px 24px}.brand-logo{display:block;width:100%;max-width:204px;height:auto;object-fit:contain}.icon-button svg{display:block;width:19px;height:19px}
 /* API-connected forms */
 .form-grid>label{display:grid;gap:6px;font-size:10px;color:#667268;font-weight:600}.form-grid input,.form-grid select,.form-grid textarea{width:100%;min-height:36px;border:1px solid #e1e7df;border-radius:7px;padding:7px 10px;font:11px "DM Sans",sans-serif;outline-color:#91ae88}.form-grid textarea{min-height:72px;resize:vertical}
+
+
+/* Main content readability and report navigation */
+.main-area .crumb{font-size:13px;color:#536554}
+.main-area .crumb b{color:#294334;font-weight:700}
+.main-area .today{font-size:12px;color:#4e624f;font-weight:600}
+.main-area footer{font-size:11px;color:#526453;font-weight:500}
+.main-area .page-heading h1{font-size:34px;color:#31583c}
+.main-area .page-heading p{font-size:14px;color:#4f6252;font-weight:500}
+.main-area .eyebrow{font-size:10px;color:#55754e}
+.main-area .button{font-size:12px}
+.main-area .metric-top{font-size:12px;color:#4d604f;font-weight:600}
+.main-area .metric-value{font-size:27px;color:#263d31}
+.main-area .metric-foot{font-size:11px;color:#536453;font-weight:500}
+.main-area .panel-title{font-size:15px;color:#2d4735;font-weight:700}
+.main-area .panel-subtitle{font-size:12px;color:#536453;font-weight:500}
+.main-area .table-search{font-size:12px}
+.main-area th{font-size:10px;color:#4c654e;font-weight:700}
+.main-area td{font-size:12px;color:#354a39;font-weight:500}
+.main-area .table-product b{font-size:12px;color:#294332;font-weight:700}
+.main-area .muted{color:#637363}
+.main-area .status{font-size:10px}
+.main-area .inventory-alert{font-size:13px;color:#705c32}
+.main-area .product-link{display:inline-block;color:inherit;text-decoration:none;border-radius:5px}
+.main-area .product-link:hover .table-product b{color:#187044;text-decoration:underline}
+.dashboard-tables{display:grid;gap:24px}
+.modal h2{color:#31583c}
+.modal p{font-size:13px}
+.form-grid>label{font-size:11px;color:#435a46}
+.form-grid input,.form-grid select,.form-grid textarea{font-size:12px}
+.toast{font-size:12px}
