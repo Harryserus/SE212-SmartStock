@@ -45,7 +45,7 @@ router.get("/slow-products",async(req,res)=>{
   catch(e){console.error(e);res.status(500).json({error:"Failed to fetch slow-moving products"});}
 });
 router.get("/supplier-issues",async(req,res)=>{
-  try{const [rows]=await pool.query(`SELECT i.issue_id AS issueId,s.supplier_name AS supplierName,i.issue_type AS issueType,
+  try{const [rows]=await pool.query(`SELECT i.issue_id AS issueId,i.purchase_order_id AS purchaseOrderId,s.supplier_name AS supplierName,i.issue_type AS issueType,
     i.description,i.issue_date AS issueDate,i.status,i.resolved_date AS resolvedDate
     FROM supplier_issue i JOIN purchase_order po ON po.purchase_order_id=i.purchase_order_id
     JOIN supplier s ON s.supplier_id=po.supplier_id ORDER BY i.issue_date DESC`);res.json(rows);}
