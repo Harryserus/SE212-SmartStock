@@ -1,8 +1,67 @@
-const express=require("express");
-const pool=require("../db");
-const router=express.Router();
-router.get("/",async(req,res)=>{try{const [r]=await pool.query("SELECT category_id AS categoryId,category_name AS categoryName,description FROM category ORDER BY category_id");res.json(r);}catch(e){console.error(e);res.status(500).json({error:"Failed to fetch categories"});}});
-router.post("/",async(req,res)=>{const {categoryName,description=null}=req.body||{};if(typeof categoryName!=="string"||!categoryName.trim())return res.status(400).json({error:"categoryName is required"});try{const [r]=await pool.execute("INSERT INTO category(category_name,description) VALUES(?,?)",[categoryName.trim(),description]);res.status(201).json({categoryId:r.insertId,categoryName:categoryName.trim(),description});}catch(e){console.error(e);res.status(500).json({error:"Failed to create category"});}});
-router.put("/:id",async(req,res)=>{const {categoryName,description=null}=req.body||{};if(typeof categoryName!=="string"||!categoryName.trim())return res.status(400).json({error:"categoryName is required"});try{const [r]=await pool.execute("UPDATE category SET category_name=?,description=? WHERE category_id=?",[categoryName.trim(),description,req.params.id]);if(!r.affectedRows)return res.status(404).json({error:"Category not found"});res.json({message:"Category updated"});}catch(e){console.error(e);res.status(500).json({error:"Failed to update category"});}});
-router.delete("/:id",async(req,res)=>{try{const [r]=await pool.execute("DELETE FROM category WHERE category_id=?",[req.params.id]);if(!r.affectedRows)return res.status(404).json({error:"Category not found"});res.status(204).end();}catch(e){res.status(409).json({error:"Category has products and cannot be deleted"});}});
-module.exports=router;
+const express = require("express");
+const pool = require("../db");
+const router = express.Router();
+router.get("/", async (req, res) => {
+  try {
+    const [r] = await pool.query(
+      "SELECT category_id AS categoryId,category_name AS categoryName,description FROM category ORDER BY category_id",
+    );
+    res.json(r);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+router.post("/", async (req, res) => {
+  const { categoryName, description = null } = req.body || {};
+  if (typeof categoryName !== "string" || !categoryName.trim())
+    return res.status(400).json({ error: "categoryName is required" });
+  try {
+    const [r] = await pool.execute(
+      "INSERT INTO category(category_name,description) VALUES(?,?)",
+      [categoryName.trim(), description],
+    );
+    res
+      .status(201)
+      .json({
+        categoryId: r.insertId,
+        categoryName: categoryName.trim(),
+        description,
+      });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create category" });
+  }
+});
+router.put("/:id", async (req, res) => {
+  const { categoryName, description = null } = req.body || {};
+  if (typeof categoryName !== "string" || !categoryName.trim())
+    return res.status(400).json({ error: "categoryName is required" });
+  try {
+    const [r] = await pool.execute(
+      "UPDATE category SET category_name=?,description=? WHERE category_id=?",
+      [categoryName.trim(), description, req.params.id],
+    );
+    if (!r.affectedRows)
+      return res.status(404).json({ error: "Category not found" });
+    res.json({ message: "Category updated" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to update category" });
+  }
+});
+router.delete("/:id", async (req, res) => {
+  try {
+    const [r] = await pool.execute("DELETE FROM category WHERE category_id=?", [
+      req.params.id,
+    ]);
+    if (!r.affectedRows)
+      return res.status(404).json({ error: "Category not found" });
+    res.status(204).end();
+  } catch (e) {
+    res
+      .status(409)
+      .json({ error: "Category has products and cannot be deleted" });
+  }
+});
+module.exports = router;
