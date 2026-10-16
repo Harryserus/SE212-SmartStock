@@ -1258,3 +1258,8 @@ tr:last-child td {
     font-size: 10px;
   }
 }
+
+
+/* Status colors */
+.status.low-stock{background:#fbe9e7;color:#c44840;}
+.status.open,.status.in-progress{background:#e8f2fc;color:#3472ad;}
